@@ -9,6 +9,7 @@ function calculate(s, fractional=false) {
   const exact=(q*(a-t)+f)/(t-p);
   const buy=fractional?exact:Math.ceil(exact-1e-10);
   const cash=buy*p+f;
-  return {buy,cash,result:(q*a+cash)/(q+buy),budgetShares,budgetCost,preview};
+  const result=(q*a+cash)/(q+buy);
+  return {buy,cash,result,recoveryBefore:(a/p-1)*100,recoveryAfter:(result/p-1)*100,budgetShares,budgetCost,preview};
 }
 if(typeof module!=='undefined') module.exports={calculate};
