@@ -11,3 +11,11 @@ console.log('Calculator checks passed: target, rounding, fees, budget, invalid a
 r=calculate(base);assert.equal(r.recoveryBefore,50);assert.equal(r.recoveryAfter,25);
 r=calculate({...base,fee:10});assert.ok(Math.abs(r.recoveryAfter-(r.result/100-1)*100)<1e-10);
 console.log("Break-even checks passed: 50% before, 25% after; fees included.");
+
+const {positionRisk}=require('./dist/calc.js');
+let risk=positionRisk(base,100,10000,10000);
+assert.equal(risk.weightBefore,50);assert.ok(Math.abs(risk.weightAfter-200/3)<1e-10);
+assert.equal(risk.pnlBefore,-5000);assert.equal(risk.pnlAfter,-5000);
+risk=positionRisk(base,100,10010,0);assert.equal(risk.pnlAfter,-5010);assert.equal(risk.weightAfter,100);
+assert.equal(positionRisk({...base,price:0},100,10000,0),null);
+console.log('Exposure checks passed: concentration, unchanged loss, purchase fees, invalid inputs.');

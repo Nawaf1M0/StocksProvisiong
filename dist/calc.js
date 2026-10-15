@@ -12,4 +12,13 @@ function calculate(s, fractional=false) {
   const result=(q*a+cash)/(q+buy);
   return {buy,cash,result,recoveryBefore:(a/p-1)*100,recoveryAfter:(result/p-1)*100,budgetShares,budgetCost,preview};
 }
-if(typeof module!=='undefined') module.exports={calculate};
+function positionRisk(s, buy, cash, otherValue) {
+  if (![s.shares,s.average,s.price,buy,cash,otherValue].every(Number.isFinite)||s.shares<=0||s.average<=0||s.price<=0||buy<0||cash<0||otherValue<0) return null;
+  const valueBefore=s.shares*s.price, valueAfter=(s.shares+buy)*s.price;
+  const costBefore=s.shares*s.average, costAfter=costBefore+cash;
+  return {valueBefore,valueAfter,costBefore,costAfter,
+    weightBefore:valueBefore/(otherValue+valueBefore)*100,
+    weightAfter:valueAfter/(otherValue+valueAfter)*100,
+    pnlBefore:valueBefore-costBefore,pnlAfter:valueAfter-costAfter};
+}
+if(typeof module!=='undefined') module.exports={calculate,positionRisk};
