@@ -44,6 +44,7 @@ jobs:
         run: |
           node test.cjs
           node data-test.cjs
+          node cloud-test.cjs
           for file in dist/*.js; do node --check "$file"; done
       - uses: actions/checkout@v4
         with:

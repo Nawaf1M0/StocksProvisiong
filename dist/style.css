@@ -46,3 +46,5 @@ body:has(input:focus) .mobile-summary{display:none}button,.quiet,select{min-heig
 .preview-banner{padding:14px 24px;background:#fff1cf;color:#654b18;font-size:13px;line-height:1.7;display:flex;justify-content:space-between;gap:12px;flex-wrap:wrap}.preview-banner a{color:#654b18;font-weight:600}.preview-banner strong{margin-right:8px}
 
 .backup-status{font-size:12px;line-height:1.8;background:#fff4db;color:#70551c;padding:12px 14px;border-radius:8px;margin:16px 0 0;overflow-wrap:anywhere}
+
+.cloud-panel{margin-bottom:24px}.cloud-panel h2{margin-top:12px}.cloud-panel .tools{border:0;padding-top:0}.cloud-panel #cloud-account,.cloud-panel #cloud-status{font-size:13px;line-height:1.8;color:#486458}.cloud-panel .fields{max-width:700px}.cloud-panel #cloud-status{background:#edf4ed;padding:12px;border-radius:8px;margin-bottom:0}

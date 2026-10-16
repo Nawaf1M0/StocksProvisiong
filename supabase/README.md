@@ -7,4 +7,4 @@
 
 The schema stores live and preview portfolios separately. Row-level security limits each account to its own rows. The save function checks revision numbers atomically and rejects conflicting writes. A connected project is required to test sign-in, account isolation, and database concurrency; this migration has not yet been run or verified against a real database.
 
-Browser integration is pending the project's public connection settings. No placeholder sign-in is enabled in the live app or preview.
+The preview integration uses the configured public project URL and publishable key. The live app remains unchanged pending review. Sign-in uses email codes and stores the session in memory only; reload requires signing in again. Upload and load are explicit actions. Run `node cloud-test.cjs` for mocked client checks. Real email delivery, owner isolation, and database behavior still require verification in the configured project.
