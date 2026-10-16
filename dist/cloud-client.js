@@ -2,7 +2,13 @@ function createCloudClient(config, request=fetch){
   let session=null;
   async function api(path,body,authenticated=false){
     if(authenticated&&(!session||Date.now()>=session.expiresAt))throw Error('Session expired. Sign in again; your browser holdings are unchanged.');
-    const response=await request(config.url+path,{method:body===undefined?'GET':'POST',headers:{apikey:config.key,'Content-Type':'application/json',...(authenticated?{Authorization:'Bearer '+session.access_token}:{})},...(body===undefined?{}:{body:JSON.stringify(body)}),signal:AbortSignal.timeout(20000)});
+    let response;
+    try{response=await request(config.url+path,{method:body===undefined?'GET':'POST',headers:{apikey:config.key,'Content-Type':'application/json',...(authenticated?{Authorization:'Bearer '+session.access_token}:{})},...(body===undefined?{}:{body:JSON.stringify(body)}),signal:AbortSignal.timeout(20000)});}
+    catch(error){
+      if(error.name==='TimeoutError'||error.name==='AbortError')throw Error('Supabase connection timed out. Try another network.');
+      if(error instanceof TypeError)throw Error('Cannot connect to '+config.url+'. Open the connection address below to check whether your browser can reach it. Check that the Supabase project is running; if needed, try another network or disable a blocking browser extension.');
+      throw error;
+    }
     const data=await response.json().catch(()=>null);
     if(!response.ok){
       if(data?.code==='40001')throw Error('Another device changed this portfolio. Load the cloud version before uploading again. Export your local changes first.');
@@ -12,6 +18,7 @@ function createCloudClient(config, request=fetch){
     return data;
   }
   return {
+    health:()=>api('/auth/v1/health'),
     sendLink:(email,redirectTo)=>{
       const redirect=new URL(redirectTo);
       if(redirect.protocol!=='https:')throw Error('Open the hosted app to sign in.');

@@ -22,5 +22,8 @@ const {createCloudClient}=require('./dist/cloud-client.js');
  await assert.rejects(client.completeLink(new URLSearchParams({access_token:'x',expires_in:'3600',expires_at:'1'})),/expired/);
  responses.push({ok:false,data:{message:'Invalid token'}});await assert.rejects(client.completeLink(new URLSearchParams({access_token:'x',expires_in:'3600'})),/Invalid token/);
  await assert.rejects(client.read('preview'),/expired/);
+ const blocked=createCloudClient({url:'https://test.supabase.co',key:'public'},async()=>{throw new TypeError('Failed to fetch');});
+ await assert.rejects(blocked.health(),/Cannot connect to https:\/\/test.supabase.co/);
+ responses.push({data:{version:'test'}});await client.health();assert.ok(calls.at(-1).url.endsWith('/auth/v1/health'));
  console.log('Cloud client checks passed: sign-in, auth headers, environment separation, revisions, conflicts, missing schema, sign-out cleanup.');
 })().catch(err=>{console.error(err);process.exitCode=1;});

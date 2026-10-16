@@ -1,5 +1,7 @@
 """Assemble a Pages release without changing the source or published checkout."""
 import argparse
+import hashlib
+import re
 import shutil
 from pathlib import Path
 
@@ -36,4 +38,16 @@ else:
         for file in preview.rglob('*'):
             if file.is_file():
                 assert (output / 'preview' / file.relative_to(preview)).read_bytes() == file.read_bytes()
+# Content hashes prevent a browser from using scripts from an older release.
+page = destination / 'index.html'
+html = page.read_text()
+def version_asset(match):
+    filename = match.group(2).split('?')[0]
+    asset = destination / filename
+    if not asset.is_file():
+        return match.group(0)
+    digest = hashlib.sha256(asset.read_bytes()).hexdigest()[:12]
+    return match.group(1) + filename + '?v=' + digest + match.group(3)
+html = re.sub(r'((?:src|href)=")([^"?]+(?:\?[^" ]*)?)(")', version_asset, html)
+page.write_text(html)
 print('Release assembled:', args.mode)

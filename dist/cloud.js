@@ -1,4 +1,5 @@
-const cloud=createCloudClient({url:'https://szuzcqzxjolqshdvwvss.supabase.co',key:'sb_publishable_W7apGnbtu0m3Kr3vHS9kmw_dq1FZZbs'});
+const cloudConfig={url:'https://szuzcqzxjolqshdvwvss.supabase.co',key:'sb_publishable_W7apGnbtu0m3Kr3vHS9kmw_dq1FZZbs'};
+const cloud=createCloudClient(cloudConfig);
 const cloudEnvironment=document.querySelector('meta[name="position-preview"]')?'preview':'live';
 let cloudUser=null,cloudRevision=null,cloudBusy=false,syncedSnapshot=null;
 const portfolioSnapshot=()=>JSON.stringify({stocks,currency});
@@ -61,3 +62,10 @@ if(authParams.has('access_token')||authParams.has('error')||authParams.has('erro
     cloudMessage('Signed in. Check cloud status or load your cloud portfolio. Nothing has been uploaded or replaced.');
   });
 }
+
+$('cloud-endpoint').textContent=cloudConfig.url;
+$('cloud-endpoint').href=cloudConfig.url+'/auth/v1/health';
+$('cloud-diagnose').onclick=()=>cloudTask(async()=>{
+  await cloud.health();
+  cloudMessage('Supabase connection succeeded. Try requesting the sign-in link again.');
+});
