@@ -48,3 +48,6 @@ body:has(input:focus) .mobile-summary{display:none}button,.quiet,select{min-heig
 .backup-status{font-size:12px;line-height:1.8;background:#fff4db;color:#70551c;padding:12px 14px;border-radius:8px;margin:16px 0 0;overflow-wrap:anywhere}
 
 .cloud-panel{margin-bottom:24px}.cloud-panel h2{margin-top:12px}.cloud-panel .tools{border:0;padding-top:0}.cloud-panel #cloud-account,.cloud-panel #cloud-status{font-size:13px;line-height:1.8;color:#486458}.cloud-panel .fields{max-width:700px}.cloud-panel #cloud-status{background:#edf4ed;padding:12px;border-radius:8px;margin-bottom:0}
+
+/* Finished account panel */
+.cloud-panel{border-color:#cddfd2;background:linear-gradient(125deg,#fff,#f4f9f3)}.cloud-panel h2{font-size:24px}.cloud-panel .fields{max-width:460px;grid-template-columns:1fr}.cloud-panel input{background:#fff}.cloud-panel .tools{gap:10px}.cloud-panel #cloud-account{margin:0 0 20px}.cloud-panel #cloud-status{background:#e8f1e8;border:1px solid #d6e5d6;margin-top:20px}.cloud-panel[aria-busy=true] #cloud-status{opacity:.7}.cloud-panel button{min-height:44px}.cloud-panel #cloud-signout{margin-left:auto;background:transparent}.cloud-panel .muted{max-width:800px}@media(max-width:480px){.cloud-panel h2{font-size:21px}.cloud-panel .tools>button{flex:1 1 140px}.cloud-panel #cloud-signout{margin-left:0}.cloud-panel #cloud-auth .tools>button{flex:1}}

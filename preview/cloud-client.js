@@ -6,13 +6,13 @@ function createCloudClient(config, request=fetch){
     try{response=await request(config.url+path,{method:body===undefined?'GET':'POST',headers:{apikey:config.key,'Content-Type':'application/json',...(authenticated?{Authorization:'Bearer '+session.access_token}:{})},...(body===undefined?{}:{body:JSON.stringify(body)}),signal:AbortSignal.timeout(20000)});}
     catch(error){
       if(error.name==='TimeoutError'||error.name==='AbortError')throw Error('Supabase connection timed out. Try another network.');
-      if(error instanceof TypeError)throw Error('Cannot connect to '+config.url+'. Open the connection address below to check whether your browser can reach it. Check that the Supabase project is running; if needed, try another network or disable a blocking browser extension.');
+      if(error instanceof TypeError)throw Error('Unable to connect. Check your internet connection and try again. Your local portfolio is safe.');
       throw error;
     }
     const data=await response.json().catch(()=>null);
     if(!response.ok){
       if(data?.code==='40001')throw Error('Another device changed this portfolio. Load the cloud version before uploading again. Export your local changes first.');
-      if(['42P01','PGRST202','PGRST205'].includes(data?.code))throw Error('Cloud database setup is missing. Run the portfolio SQL migration in Supabase.');
+      if(['42P01','PGRST202','PGRST205'].includes(data?.code))throw Error('Cloud storage is not ready yet. Your local portfolio is safe. Please contact the app owner.');
       throw Error(data?.msg||data?.message||data?.error_description||'Cloud request failed. Please try again.');
     }
     return data;
