@@ -24,13 +24,13 @@ try:
     shutil.copytree(root / 'dist', destination)
     page = destination / 'index.html'
     html = page.read_text()
-    html = html.replace('<head>', '<head><meta name="position-preview" content="step-4"><meta name="robots" content="noindex,nofollow">')
-    html = html.replace('<body>', '<body><div class="preview-banner"><span><strong>PREVIEW · STEP 4</strong>Mobile improvements for review. Uses separate saved holdings.</span><a href="../">Open live app ↗</a></div>')
+    html = html.replace('<head>', '<head><meta name="position-preview" content="step-5"><meta name="robots" content="noindex,nofollow">')
+    html = html.replace('<body>', '<body><div class="preview-banner"><span><strong>PREVIEW · STEP 5</strong>Data reliability improvements for review. Uses separate saved holdings.</span><a href="../">Open live app ↗</a></div>')
     page.write_text(html)
     git('add', '--', 'preview', cwd=checkout)
     changes = git('diff', '--cached', '--name-only', cwd=checkout).splitlines()
     assert changes and all(path.startswith('preview/') for path in changes), 'Unexpected live file changes'
-    git('commit', '-m', 'Publish Step 4 mobile preview without changing live app', cwd=checkout)
+    git('commit', '-m', 'Publish Step 5 data reliability preview without changing live app', cwd=checkout)
     print(git('rev-parse', 'HEAD', cwd=checkout))
 finally:
     if checkout.exists():
