@@ -1,11 +1,16 @@
 const $=id=>document.getElementById(id), key=document.querySelector('meta[name="position-preview"]')?'position-preview-holdings-v1':'position-holdings-v1';
-let stocks=[], selected=null, currency='USD';
+let stocks=[], selected=null, currency='USD',storageFailed=false;
 function valid(s){return s&&typeof s.symbol==='string'&&s.symbol.trim().length>0&&s.symbol.length<=40&&['shares','average','price','target','fee','budget'].every(k=>Number.isFinite(s[k]))&&s.shares>0&&s.average>0&&s.price>0&&s.target>0&&s.fee>=0&&s.budget>=0;}
 try{const data=JSON.parse(localStorage.getItem(key));if(data&&Array.isArray(data.stocks)&&data.stocks.every(valid)){stocks=data.stocks;currency=['USD','SAR','EUR','GBP','AED'].includes(data.currency)?data.currency:'USD';}}catch{}
 $('currency').value=currency;
 const money=n=>new Intl.NumberFormat('en',{style:'currency',currency,maximumFractionDigits:2}).format(n);
 const number=n=>new Intl.NumberFormat('en',{maximumFractionDigits:6}).format(n);
-function persist(){try{localStorage.setItem(key,JSON.stringify({stocks,currency}));}catch{$('storage').textContent='Browser storage is unavailable. Export a backup to keep your holdings.';}}
+function backupStatus(){
+  let last;try{last=JSON.parse(localStorage.getItem(key+'-backup'));}catch{}
+  const snapshot=JSON.stringify({stocks,currency});
+  $('backup-status').textContent=storageFailed?'Browser save failed. Export a backup now to keep this session.':!stocks.length?'Add holdings, then export a backup to keep a copy.':!last?'No backup recorded on this browser. Export JSON or CSV to protect your holdings.':last.snapshot!==snapshot?'Your holdings changed since the last backup. Export a fresh copy.':Date.now()-last.time>7*86400000?'Your last backup is over 7 days old. Consider exporting a fresh copy.':'Backup generated '+new Date(last.time).toLocaleDateString()+'. Check that the downloaded file is saved.';
+}
+function persist(){try{localStorage.setItem(key,JSON.stringify({stocks,currency}));storageFailed=false;backupStatus();return true;}catch{storageFailed=true;$('storage').textContent='Browser storage is unavailable. Export a backup to keep your holdings.';backupStatus();return false;}}
 function escapeText(s){return s.replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));}
 function render(){const cost=stocks.reduce((a,s)=>a+s.shares*s.average,0),value=stocks.reduce((a,s)=>a+s.shares*s.price,0);$('cost').textContent=money(cost);$('value').textContent=money(value);$('pnl').textContent=money(value-cost);$('pnl').style.color=value>=cost?'#278272':'#b96464';$('list').innerHTML=stocks.length?stocks.map((s,i)=>`<button class="stock ${selected===i?'active':''}" data-index="${i}" aria-pressed="${selected===i}"><span class="icon">${escapeText(s.symbol.slice(0,3).toUpperCase())}</span><span><b>${escapeText(s.symbol)}</b><small>${number(s.shares)} shares · Avg ${money(s.average)}</small></span><span class="right">${money(s.shares*s.price)}<small>Buy price ${money(s.price)}</small></span></button>`).join(''):'<div class="empty">Your portfolio starts here.<br>Add a stock and explore your next purchase.</div>';}
 function edit(index){if(typeof resetScenarios==='function')resetScenarios();selected=index;const s=index===null?{symbol:'',shares:'',average:'',price:'',target:'',fee:0,budget:0,fractional:false}:stocks[index];for(const k of ['symbol','shares','average','price','target','fee','budget'])$(k).value=s[k];$('fractional').checked=!!s.fractional;$('heading').textContent=index===null?'New holding':s.symbol+' purchase plan';$('remove').hidden=index===null;$('notice').textContent='';render();preview();}
@@ -33,13 +38,36 @@ function renderRisk(s,r){
   $('risk-summary').innerHTML=`<div class="risk-table-wrap"><table><caption class="risk-caption">At your entered buy price of ${money(s.price)}</caption><thead><tr><th scope="col">Measure</th><th scope="col">Now</th><th scope="col">After target purchase</th></tr></thead><tbody>${row('Position value',money(risk.valueBefore),money(risk.valueAfter))}${row('Invested cost',money(risk.costBefore),money(risk.costAfter))}${row('Share of tracked holdings',risk.weightBefore.toFixed(1)+'%',risk.weightAfter.toFixed(1)+'%')}${row('Unrealized gain / loss',money(risk.pnlBefore),money(risk.pnlAfter))}</tbody></table></div><p class="risk-explanation">${afterAvailable?'Buying at the entered price leaves your existing monetary gain or loss unchanged before fees. The purchase fee increases your cost and reduces gain or increases loss.':'A valid target purchase is needed to show after-purchase exposure.'}</p><p class="risk-assumptions">Concentration uses the market value of this holding and your other saved holdings at their entered prices. Cash and assets outside this app are excluded. Duplicate entries are treated as separate holdings. ${selected===null?'This unsaved holding is included in the preview.':'Unsaved edits replace this holding in the preview.'} This models the target purchase, not the fixed-budget alternative.</p>`;
 }
 $('form').addEventListener('input',preview);
-$('form').addEventListener('submit',e=>{e.preventDefault();const s=read();if(!valid(s)){$('notice').textContent='Complete all fields with valid numbers.';return;}if(selected===null){stocks.push(s);selected=stocks.length-1;}else stocks[selected]=s;persist();edit(selected);$('notice').textContent='Holding saved.';});
+$('form').addEventListener('submit',e=>{e.preventDefault();const s=read();if(!valid(s)){$('notice').textContent='Complete all fields with valid numbers.';return;}if(selected===null){stocks.push(s);selected=stocks.length-1;}else stocks[selected]=s;persist();edit(selected);$('notice').textContent=storageFailed?'Holding updated in this session only. Browser save failed; export a backup.':'Holding saved.';});
 $('list').addEventListener('click',e=>{const b=e.target.closest('[data-index]');if(b){edit(Number(b.dataset.index));if(matchMedia('(max-width:780px)').matches)$('heading').scrollIntoView({block:'start'});}});
 $('add').onclick=()=>{edit(null);$('heading').scrollIntoView({block:'start'});$('symbol').focus();};
-$('remove').onclick=()=>{if(selected===null)return;stocks.splice(selected,1);persist();edit(stocks.length?Math.min(selected,stocks.length-1):null);};
+$('remove').onclick=()=>{if(selected===null)return;if(!confirm('Delete '+stocks[selected].symbol+' from this browser? Export a backup first if you need to keep it.'))return;stocks.splice(selected,1);persist();edit(stocks.length?Math.min(selected,stocks.length-1):null);};
 $('currency').onchange=()=>{currency=$('currency').value;persist();render();preview();};
 $('sample').onclick=()=>{const example={symbol:'EXAMPLE',shares:100,average:150,price:100,target:125,fee:0,budget:5000,fractional:false};stocks.push(example);persist();edit(stocks.length-1);$('notice').textContent='Illustrative example added. Replace these with your own figures.';};
-$('export').onclick=()=>{const blob=new Blob([JSON.stringify({stocks,currency},null,2)],{type:'application/json'}),url=URL.createObjectURL(blob),a=document.createElement('a');a.href=url;a.download='position-backup.json';a.click();setTimeout(()=>URL.revokeObjectURL(url),1000);};
+function downloadBackup(csv){
+  const content=csv?exportCSV(stocks,currency):JSON.stringify({stocks,currency},null,2);
+  const blob=new Blob([content],{type:csv?'text/csv;charset=utf-8':'application/json'}),url=URL.createObjectURL(blob),a=document.createElement('a');
+  a.href=url;a.download='position-backup-'+new Date().toISOString().slice(0,10)+(csv?'.csv':'.json');a.click();setTimeout(()=>URL.revokeObjectURL(url),1000);
+  try{localStorage.setItem(key+'-backup',JSON.stringify({time:Date.now(),snapshot:JSON.stringify({stocks,currency})}));}catch{}
+  backupStatus();
+}
+$('export').onclick=()=>downloadBackup(false);
+$('export-csv').onclick=()=>downloadBackup(true);
 $('import-button').onclick=()=>$('import').click();
-$('import').onchange=async e=>{try{const file=e.target.files[0];if(!file)return;if(file.size>1000000)throw Error('Backup is too large.');const data=JSON.parse(await file.text());if(!Array.isArray(data.stocks)||!data.stocks.every(valid)||data.stocks.length>1000)throw Error('Invalid portfolio backup.');stocks.push(...data.stocks);persist();edit(stocks.length?stocks.length-1:null);$('notice').textContent='Backup imported. Holdings were added to your portfolio.';}catch(err){$('notice').textContent=err.message;}e.target.value='';};
+$('import').onchange=async e=>{
+  try{
+    const file=e.target.files[0];if(!file)return;
+    if(file.size>1000000)throw Error('Backup is too large (maximum 1 MB).');
+    const data=importPortfolio(await file.text(),file.name.toLowerCase().endsWith('.csv'),valid,currency);
+    if(stocks.length+data.stocks.length>1000)throw Error('Import would exceed the 1000-holding limit.');
+    if(stocks.length&&data.currency!==currency)throw Error('Backup uses '+data.currency+' but your portfolio uses '+currency+'. Convert amounts before importing; currency labels do not convert values.');
+    const duplicates=data.stocks.filter((s,i)=>stocks.some(x=>x.symbol.trim().toUpperCase()===s.symbol.trim().toUpperCase())||data.stocks.slice(0,i).some(x=>x.symbol.trim().toUpperCase()===s.symbol.trim().toUpperCase())).length;
+    if(!confirm('Add '+data.stocks.length+' holdings in '+data.currency+'? Existing holdings will be kept.'+(duplicates?' '+duplicates+' imported entries repeat a symbol and will be added as separate holdings.':'')))return;
+    stocks.push(...data.stocks);currency=data.currency;$('currency').value=currency;persist();edit(stocks.length-1);
+    $('notice').textContent=storageFailed?'Imported into this session only. Browser save failed; export a backup.':'Import complete. Existing holdings were kept. Export a fresh backup when ready.';
+  }catch(err){$('notice').textContent=err.message;}
+  finally{e.target.value='';}
+};
 edit(stocks.length?0:null);
+
+backupStatus();
