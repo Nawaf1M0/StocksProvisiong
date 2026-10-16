@@ -12,11 +12,25 @@ function createCloudClient(config, request=fetch){
     return data;
   }
   return {
-    sendCode:email=>api('/auth/v1/otp',{email,create_user:true}),
-    async verify(email,token){
-      const data=await api('/auth/v1/verify',{email,token,type:'email'});
-      if(!data?.access_token||!data.user?.id||!Number.isFinite(data.expires_in)||data.expires_in<=0)throw Error('Sign-in response is incomplete.');
-      session={...data,expiresAt:Date.now()+data.expires_in*1000};return data.user;
+    sendLink:(email,redirectTo)=>{
+      const redirect=new URL(redirectTo);
+      if(redirect.protocol!=='https:')throw Error('Open the hosted app to sign in.');
+      return api('/auth/v1/otp?redirect_to='+encodeURIComponent(redirect.href),{email,create_user:true});
+    },
+    async completeLink(params){
+      session=null;
+      if(params.get('error')||params.get('error_description'))throw Error('This sign-in link is expired or invalid. Request a new link.');
+      const token=params.get('access_token'),seconds=Number(params.get('expires_in'));
+      if(!token||!Number.isFinite(seconds)||seconds<=0)throw Error('Sign-in link is incomplete. Request a new link.');
+      const absoluteExpiry=Number(params.get('expires_at'));
+      const expiresAt=params.has('expires_at')?Math.min(Date.now()+seconds*1000,absoluteExpiry*1000):Date.now()+seconds*1000;
+      if(!Number.isFinite(expiresAt)||expiresAt<=Date.now())throw Error('This sign-in link has expired. Request a new link.');
+      session={access_token:token,expiresAt};
+      try{
+        const user=await api('/auth/v1/user',undefined,true);
+        if(!user?.id||!user.email)throw Error('Could not verify the signed-in account.');
+        session.user=user;return user;
+      }catch(error){session=null;throw error;}
     },
     async read(environment){
       const data=await api('/rest/v1/portfolios?select=data,revision,updated_at&user_id=eq.'+encodeURIComponent(session?.user.id||'')+'&environment=eq.'+environment,undefined,true);

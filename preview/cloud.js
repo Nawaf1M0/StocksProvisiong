@@ -16,13 +16,9 @@ function validateCloud(row){
 }
 $('cloud-send').onclick=()=>cloudTask(async()=>{
   if(!$('cloud-email').reportValidity())return;
-  await cloud.sendCode($('cloud-email').value.trim());cloudMessage('Email sent. Enter the verification code. If the email contains only a link, update the Supabase email template to include {{ .Token }}.');
-});
-$('cloud-verify').onclick=()=>cloudTask(async()=>{
-  if(!$('cloud-email').reportValidity()||!$('cloud-code').reportValidity())return;
-  const user=await cloud.verify($('cloud-email').value.trim(),$('cloud-code').value.trim());
-  cloudUser=user;cloudRevision=null;syncedSnapshot=null;$('cloud-code').value='';
-  cloudMessage('Signed in. Check cloud status or load your cloud portfolio. No local data has changed.');
+  const redirect=new URL(location.href);redirect.hash='';redirect.search='';
+  await cloud.sendLink($('cloud-email').value.trim(),redirect.href);
+  cloudMessage('Check your email and click the sign-in link. It will return you to this app. If no email arrives, check spam or your Supabase email delivery settings.');
 });
 $('cloud-check').onclick=()=>cloudTask(async()=>{
   const row=await cloud.read(cloudEnvironment);
@@ -48,10 +44,20 @@ $('cloud-upload').onclick=()=>cloudTask(async()=>{
 });
 $('cloud-signout').onclick=()=>cloudTask(async()=>{
   let failed=false;try{await cloud.signOut();}catch{failed=true;}
-  cloud.clear();cloudUser=null;cloudRevision=null;syncedSnapshot=null;$('cloud-code').value='';
+  cloud.clear();cloudUser=null;cloudRevision=null;syncedSnapshot=null;
   cloudMessage(failed?'Signed out on this page. Server sign-out could not be confirmed. Browser holdings remain on this device.':'Signed out. Browser holdings remain on this device.');
 });
 function cloudChanged(){if(cloudUser&&syncedSnapshot!==portfolioSnapshot())cloudMessage('Saved browser holdings differ from the last synced copy. Upload when ready. Unsaved form edits must be saved first.');}
 $('form').addEventListener('submit',cloudChanged);$('currency').addEventListener('change',cloudChanged);
 new MutationObserver(cloudChanged).observe($('list'),{childList:true});
 cloudControls();
+
+const authParams=new URLSearchParams(location.hash.slice(1));
+if(authParams.has('access_token')||authParams.has('error')||authParams.has('error_description')){
+  // Remove credentials from the address bar before making any network request.
+  history.replaceState(null,'',location.pathname+location.search);
+  cloudTask(async()=>{
+    cloudUser=await cloud.completeLink(authParams);cloudRevision=null;syncedSnapshot=null;
+    cloudMessage('Signed in. Check cloud status or load your cloud portfolio. Nothing has been uploaded or replaced.');
+  });
+}
