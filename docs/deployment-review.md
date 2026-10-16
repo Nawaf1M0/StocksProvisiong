@@ -1,6 +1,6 @@
 # Step 6: deployment automation for review
 
-The proposed workflow is in `docs/deploy.yml.example`; it is deliberately inactive until this step is approved. It changes the release process, not the app interface.
+The approved workflow is installed at `.github/workflows/deploy.yml`. GitHub Pages must use the GitHub Actions source before its deployment job can succeed. It changes the release process, not the app interface.
 
 After activation:
 

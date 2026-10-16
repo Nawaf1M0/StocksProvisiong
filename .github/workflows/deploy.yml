@@ -1,0 +1,84 @@
+name: Check and publish app
+
+on:
+  push:
+    branches: [work]
+    paths: ['dist/**', 'scripts/**', '*test.cjs', '.github/workflows/deploy.yml']
+  workflow_dispatch:
+    inputs:
+      target:
+        description: Release target
+        type: choice
+        options: [preview, live]
+        default: preview
+      confirmation:
+        description: Type PUBLISH to approve a live release
+        type: string
+        default: ''
+
+permissions:
+  contents: read
+
+concurrency:
+  group: position-pages
+  cancel-in-progress: false
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    permissions:
+      contents: write
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+      - name: Check approved source branch and live confirmation
+        env:
+          TARGET: ${{ inputs.target || 'preview' }}
+          CONFIRMATION: ${{ inputs.confirmation }}
+        run: |
+          test "$GITHUB_REF" = refs/heads/work
+          if [ "$TARGET" = live ]; then test "$CONFIRMATION" = PUBLISH; fi
+      - name: Validate calculator, data handling, and scripts
+        run: |
+          node test.cjs
+          node data-test.cjs
+          for file in dist/*.js; do node --check "$file"; done
+      - uses: actions/checkout@v4
+        with:
+          ref: gh-pages
+          path: published
+      - name: Assemble release, preserving the other site
+        env:
+          TARGET: ${{ inputs.target || 'preview' }}
+        run: python scripts/build-release.py --published published --output release --mode "$TARGET"
+      - name: Preserve release in hosting branch
+        env:
+          TARGET: ${{ inputs.target || 'preview' }}
+        run: |
+          cp -a release/. published/
+          cd published
+          git config user.name github-actions[bot]
+          git config user.email 41898282+github-actions[bot]@users.noreply.github.com
+          git add .
+          if ! git diff --cached --quiet; then
+            git commit -m "Publish $TARGET from $GITHUB_SHA"
+            git push origin HEAD:gh-pages
+          fi
+      - uses: actions/upload-pages-artifact@v3
+        with:
+          path: release
+  deploy:
+    needs: build
+    runs-on: ubuntu-latest
+    permissions:
+      pages: write
+      id-token: write
+    environment:
+      name: github-pages
+      url: ${{ steps.deployment.outputs.page_url }}
+    steps:
+      - name: Deploy to GitHub Pages
+        id: deployment
+        uses: actions/deploy-pages@v4
