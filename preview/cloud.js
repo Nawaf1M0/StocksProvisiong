@@ -1,4 +1,4 @@
-const cloud=createCloudClient({url:'https://szuzcqzxjolqshdvwwss.supabase.co',key:'sb_publishable_W7apGnbtu0m3Kr3vHS9kmw_dq1FZZbs'});
+const cloud=createCloudClient({url:'https://szuzcqzxjolqshdvwvss.supabase.co',key:'sb_publishable_W7apGnbtu0m3Kr3vHS9kmw_dq1FZZbs'});
 const cloudEnvironment=document.querySelector('meta[name="position-preview"]')?'preview':'live';
 let cloudUser=null,cloudRevision=null,cloudBusy=false,syncedSnapshot=null;
 const portfolioSnapshot=()=>JSON.stringify({stocks,currency});
