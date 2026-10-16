@@ -1,9 +1,9 @@
 function createCloudClient(config, request=fetch){
   let session=null;
-  async function api(path,body,authenticated=false){
+  async function api(path,body,authenticated=false,method){
     if(authenticated&&(!session||Date.now()>=session.expiresAt))throw Error('Session expired. Sign in again; your browser holdings are unchanged.');
     let response;
-    try{response=await request(config.url+path,{method:body===undefined?'GET':'POST',headers:{apikey:config.key,'Content-Type':'application/json',...(authenticated?{Authorization:'Bearer '+session.access_token}:{})},...(body===undefined?{}:{body:JSON.stringify(body)}),signal:AbortSignal.timeout(20000)});}
+    try{response=await request(config.url+path,{method:method||(body===undefined?'GET':'POST'),headers:{apikey:config.key,'Content-Type':'application/json',...(authenticated?{Authorization:'Bearer '+session.access_token}:{})},...(body===undefined?{}:{body:JSON.stringify(body)}),signal:AbortSignal.timeout(20000)});}
     catch(error){
       if(error.name==='TimeoutError'||error.name==='AbortError')throw Error('Supabase connection timed out. Try another network.');
       if(error instanceof TypeError)throw Error('Unable to connect. Check your internet connection and try again. Your local portfolio is safe.');
@@ -19,6 +19,21 @@ function createCloudClient(config, request=fetch){
   }
   return {
     health:()=>api('/auth/v1/health'),
+    async signInPassword(email,password){
+      session=null;
+      const data=await api('/auth/v1/token?grant_type=password',{email,password});
+      if(!data?.access_token||!data.user?.id||!Number.isFinite(data.expires_in)||data.expires_in<=0)throw Error('Sign-in response is incomplete.');
+      session={access_token:data.access_token,user:data.user,expiresAt:Date.now()+data.expires_in*1000};
+      return data.user;
+    },
+    resetPassword:(email,redirectTo)=>{
+      const redirect=new URL(redirectTo);if(redirect.protocol!=='https:')throw Error('Open the hosted app to reset your password.');
+      return api('/auth/v1/recover?redirect_to='+encodeURIComponent(redirect.href),{email});
+    },
+    async setPassword(password){
+      if(password.length<8)throw Error('Choose a password of at least 8 characters.');
+      return api('/auth/v1/user',{password},true,'PUT');
+    },
     sendLink:(email,redirectTo)=>{
       const redirect=new URL(redirectTo);
       if(redirect.protocol!=='https:')throw Error('Open the hosted app to sign in.');

@@ -15,6 +15,29 @@ function validateCloud(row){
   if(!Number.isSafeInteger(row?.revision)||row.revision<1||!data||!Array.isArray(data.stocks)||data.stocks.length>1000||!data.stocks.every(s=>valid(s)&&(s.fractional===undefined||typeof s.fractional==='boolean'))||!['USD','SAR','EUR','GBP','AED'].includes(data.currency))throw Error('Cloud portfolio is invalid. Local holdings were kept.');
   return data;
 }
+function cloudRedirect(){const url=new URL(location.href);url.hash='';url.search='';return url.href;}
+$('cloud-signin-form').addEventListener('submit',e=>{
+  e.preventDefault();cloudTask(async()=>{
+    if(!$('cloud-signin-form').reportValidity())return;
+    const password=$('cloud-password').value;$('cloud-password').value='';
+    cloudUser=await cloud.signInPassword($('cloud-email').value.trim(),password);cloudRevision=null;syncedSnapshot=null;
+    cloudMessage('Signed in. Checking your cloud portfolio…');await checkCloudPortfolio();
+  });
+});
+$('cloud-forgot').onclick=()=>cloudTask(async()=>{
+  if(!$('cloud-email').reportValidity())return;
+  await cloud.resetPassword($('cloud-email').value.trim(),cloudRedirect());
+  cloudMessage('If this email has an account, a password reset link will arrive shortly. Follow it to choose a new password.');
+});
+$('cloud-password-form').addEventListener('submit',e=>{
+  e.preventDefault();cloudTask(async()=>{
+    if(!$('cloud-password-form').reportValidity())return;
+    const password=$('cloud-new-password').value;
+    if(password!==$('cloud-confirm-password').value)throw Error('The new passwords do not match.');
+    try{await cloud.setPassword(password);}finally{$('cloud-new-password').value='';$('cloud-confirm-password').value='';}
+    $('cloud-password-settings').open=false;cloudMessage('Password saved. You can now sign in with your email and password.');
+  });
+});
 $('cloud-send').onclick=()=>cloudTask(async()=>{
   if(!$('cloud-email').reportValidity())return;
   const redirect=new URL(location.href);redirect.hash='';redirect.search='';
@@ -45,7 +68,7 @@ $('cloud-upload').onclick=()=>cloudTask(async()=>{
 });
 $('cloud-signout').onclick=()=>cloudTask(async()=>{
   let failed=false;try{await cloud.signOut();}catch{failed=true;}
-  cloud.clear();cloudUser=null;cloudRevision=null;syncedSnapshot=null;
+  cloud.clear();$('cloud-password-form').reset();$('cloud-password').value='';$('cloud-password-settings').open=false;cloudUser=null;cloudRevision=null;syncedSnapshot=null;
   cloudMessage(failed?'Signed out on this page. Server sign-out could not be confirmed. Browser holdings remain on this device.':'Signed out. Browser holdings remain on this device.');
 });
 function cloudChanged(){if(cloudUser&&syncedSnapshot!==portfolioSnapshot())cloudMessage('This device has changes that haven’t been saved to cloud. Save your holdings first, then choose Save to cloud.');}
@@ -59,7 +82,7 @@ if(authParams.has('access_token')||authParams.has('error')||authParams.has('erro
   history.replaceState(null,'',location.pathname+location.search);
   cloudTask(async()=>{
     cloudUser=await cloud.completeLink(authParams);cloudRevision=null;syncedSnapshot=null;
-    cloudMessage('Signed in. Checking your cloud portfolio…');await checkCloudPortfolio();
+    if(authParams.get('type')==='recovery'){$('cloud-password-settings').open=true;cloudMessage('Choose a new password below to complete your reset.');$('cloud-new-password').focus();}else{cloudMessage('Signed in. Checking your cloud portfolio…');await checkCloudPortfolio();}
   });
 }
 
