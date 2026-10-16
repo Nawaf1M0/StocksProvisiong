@@ -1,4 +1,4 @@
-const $=id=>document.getElementById(id), key='position-holdings-v1';
+const $=id=>document.getElementById(id), key=document.querySelector('meta[name="position-preview"]')?'position-preview-holdings-v1':'position-holdings-v1';
 let stocks=[], selected=null, currency='USD';
 function valid(s){return s&&typeof s.symbol==='string'&&s.symbol.trim().length>0&&s.symbol.length<=40&&['shares','average','price','target','fee','budget'].every(k=>Number.isFinite(s[k]))&&s.shares>0&&s.average>0&&s.price>0&&s.target>0&&s.fee>=0&&s.budget>=0;}
 try{const data=JSON.parse(localStorage.getItem(key));if(data&&Array.isArray(data.stocks)&&data.stocks.every(valid)){stocks=data.stocks;currency=['USD','SAR','EUR','GBP','AED'].includes(data.currency)?data.currency:'USD';}}catch{}
@@ -20,6 +20,7 @@ function preview(){
   }else{
     $('result').innerHTML=`<strong>${number(r.buy)} <span class="shares-unit">shares to buy</span></strong><div class="result-metrics"><div><span>Current average</span><b>${money(s.average)}</b></div><div><span>Target average</span><b>${money(s.target)}</b></div><div><span>Resulting average</span><b>${money(r.result)}</b></div><div><span>Cash needed · includes fee</span><b>${money(r.cash)}</b></div><div><span>Average reduced by</span><b>${((1-r.result/s.average)*100).toFixed(2)}%</b></div><div><span>Total shares after buying</span><b>${number(s.shares+r.buy)}</b></div></div><div class="recovery"><span>Price rise needed to break even</span><div><b>${r.recoveryBefore.toFixed(2)}%</b><span aria-label="changes to"> → </span><b>${r.recoveryAfter.toFixed(2)}%</b></div><p>Before → after this purchase, measured from your entered buy price of ${money(s.price)}. Excludes selling fees and taxes.</p></div><p class="rounding-note">${s.fractional?'Fractional-share estimate; your broker may require different precision.':'Rounded up to whole shares to reach or beat your target average.'} Lowering your average increases your investment; it does not remove the existing loss.</p>`;
   }
+  $('mobile-summary-value').textContent=incomplete?'Enter holding details':r.error?'Check your target':number(r.buy)+' shares · '+money(r.cash);
   renderRisk(s,r);
   $('preview').innerHTML=r.preview!==undefined?`<div class="budget-metrics"><div><span>Shares to buy</span><b>${number(r.budgetShares)}</b></div><div><span>New average</span><b>${money(r.preview)}</b></div></div><span class="budget-detail">Cash used ${money(r.budgetCost)} · Remaining ${money(s.budget-r.budgetCost)}</span>`:'Enter holding details above to explore a budget.';
 }
@@ -33,8 +34,8 @@ function renderRisk(s,r){
 }
 $('form').addEventListener('input',preview);
 $('form').addEventListener('submit',e=>{e.preventDefault();const s=read();if(!valid(s)){$('notice').textContent='Complete all fields with valid numbers.';return;}if(selected===null){stocks.push(s);selected=stocks.length-1;}else stocks[selected]=s;persist();edit(selected);$('notice').textContent='Holding saved.';});
-$('list').addEventListener('click',e=>{const b=e.target.closest('[data-index]');if(b)edit(Number(b.dataset.index));});
-$('add').onclick=()=>{edit(null);$('symbol').focus();};
+$('list').addEventListener('click',e=>{const b=e.target.closest('[data-index]');if(b){edit(Number(b.dataset.index));if(matchMedia('(max-width:780px)').matches)$('heading').scrollIntoView({block:'start'});}});
+$('add').onclick=()=>{edit(null);$('heading').scrollIntoView({block:'start'});$('symbol').focus();};
 $('remove').onclick=()=>{if(selected===null)return;stocks.splice(selected,1);persist();edit(stocks.length?Math.min(selected,stocks.length-1):null);};
 $('currency').onchange=()=>{currency=$('currency').value;persist();render();preview();};
 $('sample').onclick=()=>{const example={symbol:'EXAMPLE',shares:100,average:150,price:100,target:125,fee:0,budget:5000,fractional:false};stocks.push(example);persist();edit(stocks.length-1);$('notice').textContent='Illustrative example added. Replace these with your own figures.';};
