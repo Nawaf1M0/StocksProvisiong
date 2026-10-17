@@ -11,6 +11,7 @@ function createCloudClient(config, request=fetch){
     }
     const data=await response.json().catch(()=>null);
     if(!response.ok){
+      if(path.startsWith('/functions/v1/market-quote')&&response.status===404)throw Error('Market data is not connected yet. Continue entering your buy price manually.');
       if(data?.code==='40001')throw Error('Another device changed this portfolio. Load the cloud version before uploading again. Export your local changes first.');
       if(['42P01','PGRST202','PGRST205'].includes(data?.code))throw Error('Cloud storage is not ready yet. Your local portfolio is safe. Please contact the app owner.');
       throw Error(data?.msg||data?.message||data?.error_description||'Cloud request failed. Please try again.');
@@ -19,6 +20,7 @@ function createCloudClient(config, request=fetch){
   }
   return {
     health:()=>api('/auth/v1/health'),
+    quote:request=>api('/functions/v1/market-quote',request,true),
     async signInPassword(email,password){
       session=null;
       const data=await api('/auth/v1/token?grant_type=password',{email,password});
