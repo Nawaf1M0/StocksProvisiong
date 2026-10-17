@@ -1,0 +1,12 @@
+const assert=require('node:assert/strict');
+const {quoteRequest,validateQuote}=require('./dist/quotes.js');
+const sa=quoteRequest('2222','SA','SAR'),us=quoteRequest(' aapl ','US','USD');
+assert.equal(us.symbol,'AAPL');assert.equal(sa.currency,'SAR');
+assert.throws(()=>quoteRequest('2222','SA','USD'),/does not convert/);
+assert.throws(()=>quoteRequest('2222.SR','SA','SAR'),/four-digit/);
+assert.throws(()=>quoteRequest('AAPL?apikey=x','US','USD'),/valid US/);
+const now=Date.parse('2026-10-17T12:00:00Z');
+const quote={...sa,price:25.5,asOf:'2026-10-15T12:00:00Z',source:'Test provider',feed:'end-of-day'};
+assert.equal(validateQuote(quote,sa,now).price,25.5);
+for(const change of [{price:0},{price:NaN},{currency:'USD'},{symbol:'1111'},{market:'US'},{asOf:'invalid'},{asOf:'2027-01-01'},{source:''},{feed:'unknown'}])assert.throws(()=>validateQuote({...quote,...change},sa,now));
+console.log('Quote checks passed: markets, symbols, currency isolation, price validity, timestamps, source and feed labels.');
