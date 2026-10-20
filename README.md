@@ -1,18 +1,132 @@
-# Position
+# Position — Stock Averaging Planner
 
-Open `dist/index.html` in a browser. No installation or account is needed.
+A lightweight portfolio tracker and averaging-down calculator. Enter your holdings and a desired average cost to see the additional shares and cash required, compare purchases, and understand how your exposure changes.
 
-Add your stock symbol, shares owned, average cost, new buy price, desired average, and optional purchase fee. Save each holding. Use the fixed-budget preview to compare an affordable purchase. Holdings are saved in browser local storage; export JSON backups to preserve or transfer them. Import adds holdings without replacing existing entries.
+**[Open the live app](https://nawaf1m0.github.io/StocksProvisiong/)** · **[Review the preview](https://nawaf1m0.github.io/StocksProvisiong/preview/)** · **[Deployment status](https://github.com/Nawaf1M0/StocksProvisiong/actions)**
 
-Prices are manually entered. Use one currency for all holdings; changing currency does not convert amounts. The calculator includes a flat fee for the new purchase and assumes the entered existing average already includes prior costs. Whole-share purchases round up to reach or beat the target; fractional shares can be enabled per holding.
+## Features
 
-Run calculation checks with `node test.cjs`. Run scenario interface regression checks with `npm ci --ignore-scripts` followed by `node scenarios-test.cjs` (Node 22). These load the real HTML, calculator, planner and scenario scripts in jsdom, dispatch input/click events, and check displayed results and saved-holding preservation. They do not call authentication or market-data services. Pull requests run the scenario checks without publishing; releases require the checks to pass.
+- Multiple holdings with shares owned, average cost, proposed buy price, and target average.
+- Required purchase size and cash, including a flat purchase fee and optional fractional shares.
+- Fixed-budget estimates and up to three side-by-side purchase scenarios.
+- Before/after averages, break-even recovery percentages, position value, portfolio concentration, and unrealized gain or loss.
+- Mobile section shortcuts, touch-friendly inputs, and a persistent purchase summary.
+- Browser-local storage, JSON/CSV backups, backup reminders, validated imports, and deletion confirmation.
+- Optional Supabase email/password or email-link sign-in, password setup and recovery, and manual cross-device portfolio sync.
+- Saudi delayed reference quotes through SAHMK and US end-of-day quotes through Alpha Vantage, with source and quote date/time shown.
 
-## Review previews
+## Getting started
 
-The live app stays at the repository's GitHub Pages root. Proposed changes are published at `preview/`, marked with a banner and using `position-preview-holdings-v1` browser storage. Live storage remains `position-holdings-v1`. Preview is publicly accessible and does not copy live holdings automatically. Use Load example or import a backup to test.
+Use the hosted app, or open `dist/index.html` locally for the calculator. The static app needs no dependency installation or build step. Hosted HTTPS is required for the supported email-link authentication flow; cloud sync and market data also require configured services and an internet connection.
 
-To prepare preview hosting files: fetch `origin gh-pages`, then run `python scripts/prepare-preview.py`. It prints a new Pages commit SHA and checks that every changed path is under `preview/`. Push that SHA to `gh-pages`. This publishes the preview without promoting it to the live root. Promote only after review, preserving the preview folder when preparing subsequent production releases.
+1. Choose the currency used by your holdings.
+2. Select **Add stock**, then enter its symbol, shares owned, average purchase price, new buy price, target average, and optional fee.
+3. Review the shares and cash needed, the budget alternative, and position exposure.
+4. Select **Save holding** to keep the planning values in this browser.
+5. Add comparison scenarios to explore other prices, targets, and budgets. **Use in purchase planner** copies a scenario into the form for review.
 
-Step 5 adds JSON/CSV backups and imports. CSV columns are `symbol,shares,average,price,target,fee,budget,fractional,currency`; use plain decimal numbers without thousands separators and `true`/`false` for fractional. Imports validate all rows first, show an add confirmation with duplicate-symbol warnings, and reject a different currency when holdings already exist. Exports mark spreadsheet formula-like symbols as text and restore them on reimport. Backup status records generation, not proof that the browser saved the file. Deletion asks for confirmation. Test imports with `node data-test.cjs`.
+Saving a plan does not execute a trade or add proposed shares to your actual holdings. Update the shares and average cost yourself after a completed purchase. Scenarios are temporary and reset when you change holdings.
 
+## Calculation assumptions
+
+For existing shares `q`, average cost `a`, buy price `p`, target average `t`, and a flat new-purchase fee `f`:
+
+```text
+Additional shares = (q × (a − t) + f) / (t − p)
+Cash required     = additional shares × p + f
+Resulting average = (q × a + cash required) / (q + additional shares)
+```
+
+A lower target is reachable only when the new buy price is below that target. Whole-share mode rounds the required shares upward; fractional mode uses the calculated amount. Your existing average is assumed to include prior costs. Selling fees and taxes are excluded from break-even estimates.
+
+For example, 100 shares averaging 150 require another 100 shares at 100 to reach an average of 125, before fees. The existing monetary loss at a price of 100 remains 5,000, while the invested amount increases.
+
+Use **one currency per portfolio**. Changing the currency label does not convert amounts. Concentration uses the entered prices of tracked holdings, excludes cash and assets outside the app, and treats duplicate entries as separate holdings.
+
+## Accounts and cloud sync
+
+An account is optional. Without signing in, holdings remain in browser local storage.
+
+- Use email/password sign-in, or request an email sign-in link.
+- If you have no password, sign in by email link first and open **Set or change password**. **Forgot password?** starts email recovery.
+- **Save to cloud** uploads saved holdings; unsaved form edits are excluded.
+- **Load from cloud** replaces this browser's portfolio after confirmation. Export a backup first if needed.
+- Conflicting saves from another device are rejected using cloud revision checks; no silent merge is performed.
+- Sessions are held in memory. Reloading or closing the page requires signing in again. Signing out keeps the local holdings on that device.
+
+Live and preview use separate browser storage keys and separate cloud portfolios. They share the same account credentials, but preview holdings do not transfer into live automatically.
+
+For a separate installation, follow [Supabase setup](supabase/README.md) and configure your own public project URL and publishable key in `dist/cloud.js`. Never put an administrative, service-role, or secret key in browser source.
+
+## Delayed and end-of-day prices
+
+In the planner, expand **Use a delayed or closing market price**, choose the market, and select **Fetch reference price**. Sign-in is required.
+
+| Market | Provider | Feed | Portfolio currency |
+| --- | --- | --- | --- |
+| Saudi stocks, such as `2222` | SAHMK | Delayed quotes | SAR |
+| US stocks, such as `AAPL` | Alpha Vantage | End-of-day quotes | USD |
+
+Fetched quotes do not overwrite the buy price automatically. Review the source and timestamp, then select **Use for buy price** to copy it into the plan. Save the holding separately if you want to retain that price. Quotes are references, not guaranteed execution prices, and the displayed date may be from the last trading session.
+
+Provider coverage and account quotas apply. The server caches quotes for up to 15 minutes per instance; this can add to provider delay. Failed requests retain the entered price. Manual price entry remains available.
+
+Deployment requires the `market-quote` Supabase Edge Function and private `SAHMK_API_KEY` and `ALPHA_VANTAGE_API_KEY` secrets. See [market-data setup](docs/market-data-setup.md). The browser never receives the provider keys.
+
+## Backups and imports
+
+Use **Export JSON** or **Export CSV** to preserve or transfer holdings. A backup reminder records when a file was generated; check that your browser actually saved it.
+
+Imports validate the entire file before asking to add its holdings. Existing entries are kept, duplicate symbols generate a warning, and imports in a different currency are rejected when the portfolio already contains holdings. Import limits are 1 MB per file and 1,000 total holdings.
+
+CSV uses these columns:
+
+```csv
+symbol,shares,average,price,target,fee,budget,fractional,currency
+AAPL,10,150,120,135,0,1000,false,USD
+```
+
+Use plain decimal numbers without thousands separators and `true` or `false` for fractional shares. Exports escape formula-like symbols as spreadsheet text and restore them on import.
+
+## Development and verification
+
+The frontend is buildless HTML, CSS, and JavaScript in `dist/`. Supabase provides authentication, owner-isolated portfolio storage, and the quote proxy.
+
+With Node.js 22 or later, install the development-only test dependency and run:
+
+```bash
+npm ci --ignore-scripts
+node scenarios-test.cjs
+node test.cjs
+node data-test.cjs
+node cloud-test.cjs
+node quotes-test.cjs
+node quotes-edge-test.cjs
+```
+
+Scenario regression tests use jsdom to load the real HTML, calculator, planner, and scenario scripts, dispatch input/click events, and check displayed results and saved-holding preservation. They do not call authentication or market-data services. The other tests check calculation edge cases, imports, mocked authentication and sync requests, quote validation, and mocked quote-server behavior. They do not replace browser testing or real provider/account verification. The deployment workflow also checks JavaScript syntax.
+
+## Preview and live releases
+
+GitHub Pages is configured with **Source: GitHub Actions**. The `github-pages` environment must allow the `work` branch to deploy.
+
+1. Push app, script, test, dependency, or workflow changes to `work`. Pull requests into `work` run checks without publishing.
+2. **Check and publish app** runs its checks and updates `/preview/`, preserving the live root.
+3. Review the preview before approving a live release.
+4. In [the deployment workflow](https://github.com/Nawaf1M0/StocksProvisiong/actions/workflows/deploy.yml), select **Run workflow**, branch **work**, target **live**, and confirmation **PUBLISH**.
+5. Wait for checks, build, and deploy to succeed, then refresh the live app.
+
+The release assembler preserves the other version's files and versions asset URLs to avoid stale scripts. Assembled releases are retained on `gh-pages`. Documentation-only changes do not automatically trigger the app deployment workflow.
+
+## Project files
+
+| Path | Purpose |
+| --- | --- |
+| `dist/` | Static frontend and client-side calculations |
+| `supabase/001_portfolio_sync.sql` | Portfolio table, ownership policies, and revision-checked save function |
+| `supabase/functions/market-quote/index.js` | Authenticated market-data proxy |
+| `scripts/build-release.py` | Assemble preview/live hosting files while preserving the other version |
+| `.github/workflows/deploy.yml` | Checks and GitHub Pages deployment |
+| `docs/` | Setup and implementation notes |
+
+This app is a planning calculator. Averaging down increases the money exposed to a stock; a lower average cost does not remove an existing loss or guarantee a recovery.
