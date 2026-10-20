@@ -3,7 +3,9 @@ name: Check and publish app
 on:
   push:
     branches: [work]
-    paths: ['dist/**', 'scripts/**', '*test.cjs', '.github/workflows/deploy.yml']
+    paths: ['dist/**', 'scripts/**', '*test.cjs', 'package*.json', '.github/workflows/deploy.yml']
+  pull_request:
+    branches: [work]
   workflow_dispatch:
     inputs:
       target:
@@ -20,11 +22,31 @@ permissions:
   contents: read
 
 concurrency:
-  group: position-pages
+  group: position-${{ github.event_name == 'pull_request' && github.ref || 'pages' }}
   cancel-in-progress: false
 
 jobs:
+  checks:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+          cache: npm
+      - run: npm ci --ignore-scripts
+      - name: Validate calculator, scenarios, data handling, and scripts
+        run: |
+          node scenarios-test.cjs
+          node test.cjs
+          node data-test.cjs
+          node cloud-test.cjs
+          node quotes-test.cjs
+          node quotes-edge-test.cjs
+          for file in dist/*.js; do node --check "$file"; done
   build:
+    if: github.event_name != 'pull_request'
+    needs: checks
     runs-on: ubuntu-latest
     permissions:
       contents: write
@@ -40,14 +62,6 @@ jobs:
         run: |
           test "$GITHUB_REF" = refs/heads/work
           if [ "$TARGET" = live ]; then test "$CONFIRMATION" = PUBLISH; fi
-      - name: Validate calculator, data handling, and scripts
-        run: |
-          node test.cjs
-          node data-test.cjs
-          node cloud-test.cjs
-          node quotes-test.cjs
-          node quotes-edge-test.cjs
-          for file in dist/*.js; do node --check "$file"; done
       - uses: actions/checkout@v4
         with:
           ref: gh-pages
@@ -85,3 +99,4 @@ jobs:
       - name: Deploy to GitHub Pages
         id: deployment
         uses: actions/deploy-pages@v4
+
