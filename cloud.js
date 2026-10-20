@@ -1,6 +1,7 @@
 const cloudConfig={url:'https://szuzcqzxjolqshdvwvss.supabase.co',key:'sb_publishable_W7apGnbtu0m3Kr3vHS9kmw_dq1FZZbs'};
-const cloud=createCloudClient(cloudConfig);
 const cloudEnvironment=document.querySelector('meta[name="position-preview"]')?'preview':'live';
+const cloudSessionKey='position-auth-'+cloudEnvironment+'-v1';
+const cloud=createCloudClient({...cloudConfig,storageKey:cloudSessionKey});
 let cloudUser=null,cloudRevision=null,cloudBusy=false,syncedSnapshot=null;
 const portfolioSnapshot=()=>JSON.stringify({stocks,currency});
 function cloudMessage(message){$('cloud-status').textContent=message;}
@@ -9,7 +10,7 @@ function cloudControls(){
   for(const button of $('cloud-panel').querySelectorAll('button'))button.disabled=cloudBusy;
   $('cloud-account').textContent=cloudUser?'Signed in as '+cloudUser.email+(cloudEnvironment==='preview'?' · Preview':''):'Use your portfolio on this device, or sign in to access cloud saves.';
 }
-async function cloudTask(task){if(cloudBusy)return;cloudBusy=true;$('cloud-panel').setAttribute('aria-busy','true');cloudControls();try{await task();}catch(err){cloudMessage(err.name==='TimeoutError'?'Connection timed out. Your local holdings are unchanged.':err.message);}finally{cloudBusy=false;$('cloud-panel').setAttribute('aria-busy','false');cloudControls();}}
+async function cloudTask(task){if(cloudBusy)return;cloudBusy=true;$('cloud-panel').setAttribute('aria-busy','true');cloudControls();try{await task();}catch(err){if(!cloud.currentUser()){cloudUser=null;cloudRevision=null;syncedSnapshot=null;}cloudMessage(err.name==='TimeoutError'?'Connection timed out. Your local holdings are unchanged.':err.message);}finally{cloudBusy=false;$('cloud-panel').setAttribute('aria-busy','false');cloudControls();}}
 function validateCloud(row){
   const data=row?.data;
   if(!Number.isSafeInteger(row?.revision)||row.revision<1||!data||!Array.isArray(data.stocks)||data.stocks.length>1000||!data.stocks.every(s=>valid(s)&&(s.fractional===undefined||typeof s.fractional==='boolean'))||!['USD','SAR','EUR','GBP','AED'].includes(data.currency))throw Error('Cloud portfolio is invalid. Local holdings were kept.');
@@ -86,3 +87,21 @@ if(authParams.has('access_token')||authParams.has('error')||authParams.has('erro
   });
 }
 
+
+async function restoreCloudSession(){
+  if(cloudBusy)return;
+  await cloudTask(async()=>{
+    const user=await cloud.restore();
+    if(!user){cloudUser=null;cloudRevision=null;syncedSnapshot=null;return;}
+    const changed=cloudUser?.id!==user.id;cloudUser=user;
+    if(changed){cloudRevision=null;syncedSnapshot=null;cloudMessage('Welcome back. Checking your cloud portfolio…');await checkCloudPortfolio();}
+  });
+}
+if(!authParams.has('access_token')&&!authParams.has('error')&&!authParams.has('error_description'))restoreCloudSession();
+window.addEventListener('storage',event=>{
+  if(event.key!==cloudSessionKey&&event.key!==null)return;
+  if(event.newValue===null){cloud.clear();cloudUser=null;cloudRevision=null;syncedSnapshot=null;cloudControls();cloudMessage('Signed out. Your local portfolio is still on this device.');}
+  else restoreCloudSession();
+});
+window.addEventListener('online',restoreCloudSession);
+document.addEventListener('visibilitychange',()=>{if(document.visibilityState==='visible')restoreCloudSession();});
