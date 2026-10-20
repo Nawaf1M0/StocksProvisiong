@@ -28,6 +28,7 @@ const {createCloudClient}=require('./dist/cloud-client.js');
  responses.push({data:{access_token:'password-session',expires_in:3600,user:{id:'user-2',email:'password@example.com'}}});
  const passwordUser=await client.signInPassword('password@example.com','test-password');assert.equal(passwordUser.id,'user-2');
  assert.ok(calls.at(-1).url.endsWith('/auth/v1/token?grant_type=password'));
+ const beforeOwnerCheck=calls.length;await assert.rejects(client.save('live',{stocks:[]},0,'different-user'),/account changed/);assert.equal(calls.length,beforeOwnerCheck);
  assert.deepEqual(JSON.parse(calls.at(-1).options.body),{email:'password@example.com',password:'test-password'});
  await assert.rejects(client.setPassword('short'),/at least 8/);
  responses.push({data:{id:'user-2'}});await client.setPassword('new-password');

@@ -35,8 +35,9 @@ function createCloudClient(config, request=fetch){
     }
     await refreshPromise;
   }
-  async function api(path,body,authenticated=false,method){
+  async function api(path,body,authenticated=false,method,expectedUser){
     if(authenticated)await ensureSession();
+    if(expectedUser&&session?.user?.id!==expectedUser)throw Error('The signed-in account changed. Retry after the account loads.');
     let response;
     try{response=await request(config.url+path,{method:method||(body===undefined?'GET':'POST'),headers:{apikey:config.key,'Content-Type':'application/json',...(authenticated?{Authorization:'Bearer '+session.access_token}:{})},...(body===undefined?{}:{body:JSON.stringify(body)}),signal:AbortSignal.timeout(20000)});}
     catch(error){
@@ -47,7 +48,7 @@ function createCloudClient(config, request=fetch){
     const data=await response.json().catch(()=>null);
     if(!response.ok){
       if(path.startsWith('/functions/v1/market-quote')&&response.status===404)throw Error('Market data is not connected yet. Continue entering your buy price manually.');
-      if(data?.code==='40001')throw Error('Another device changed this portfolio. Load the cloud version before uploading again. Export your local changes first.');
+      if(data?.code==='40001')throw Error('Another device changed this portfolio. Export local changes and reload the cloud copy to resolve the conflict.');
       if(['42P01','PGRST202','PGRST205'].includes(data?.code))throw Error('Cloud storage is not ready yet. Your local portfolio is safe. Please contact the app owner.');
       const error=Error(data?.msg||data?.message||data?.error_description||'Cloud request failed. Please try again.');error.status=response.status;if(authenticated&&response.status===401)clearSession();throw error;
     }
@@ -96,15 +97,15 @@ function createCloudClient(config, request=fetch){
         session.user=user;persistSession();return user;
       }catch(error){clearSession();throw error;}
     },
-    async read(environment){
+    async read(environment,expectedUser=session?.user?.id){
       await ensureSession();
-      const data=await api('/rest/v1/portfolios?select=data,revision,updated_at&user_id=eq.'+encodeURIComponent(session?.user.id||'')+'&environment=eq.'+environment,undefined,true);
+      const data=await api('/rest/v1/portfolios?select=data,revision,updated_at&user_id=eq.'+encodeURIComponent(expectedUser||session?.user.id||'')+'&environment=eq.'+environment,undefined,true,undefined,expectedUser);
       if(!Array.isArray(data)||data.length>1)throw Error('Unexpected cloud portfolio response.');
       return data[0]||null;
     },
-    async save(environment,data,revision){
+    async save(environment,data,revision,expectedUser=session?.user?.id){
       if(!Number.isSafeInteger(revision)||revision<0)throw Error('Load the cloud portfolio before uploading.');
-      const result=await api('/rest/v1/rpc/save_portfolio',{p_environment:environment,p_data:data,p_expected_revision:revision},true);
+      const result=await api('/rest/v1/rpc/save_portfolio',{p_environment:environment,p_data:data,p_expected_revision:revision},true,undefined,expectedUser);
       if(!Array.isArray(result)||!Number.isSafeInteger(result[0]?.revision))throw Error('Cloud did not confirm the save. Reload before retrying.');
       return result[0];
     },

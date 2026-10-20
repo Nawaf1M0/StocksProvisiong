@@ -12,7 +12,7 @@ A lightweight portfolio tracker and averaging-down calculator. Enter your holdin
 - Before/after averages, break-even recovery percentages, position value, portfolio concentration, and unrealized gain or loss.
 - Mobile section shortcuts, touch-friendly inputs, and a persistent purchase summary.
 - Browser-local storage, JSON/CSV backups, backup reminders, validated imports, and deletion confirmation.
-- Optional Supabase email/password or email-link sign-in, password setup and recovery, and manual cross-device portfolio sync.
+- Optional Supabase email/password or email-link sign-in, password setup and recovery, and automatic account-linked portfolio storage.
 - Saudi delayed reference quotes through SAHMK and US end-of-day quotes through Alpha Vantage, with source and quote date/time shown.
 
 ## Getting started
@@ -49,12 +49,14 @@ An account is optional. Without signing in, holdings remain in browser local sto
 
 - Use email/password sign-in, or request an email sign-in link.
 - If you have no password, sign in by email link first and open **Set or change password**. **Forgot password?** starts email recovery.
-- **Save to cloud** uploads saved holdings; unsaved form edits are excluded.
-- **Load from cloud** replaces this browser's portfolio after confirmation. Export a backup first if needed.
+- Signing in automatically loads your portfolio from Supabase. Saved holdings, imports, deletions, and currency changes automatically sync to your account; unsaved form edits are excluded.
+- Each user has a separate browser cache. Offline or failed saves remain pending and retry when the connection returns. The account status message distinguishes local changes from a confirmed cloud save.
+- **Retry account sync** retries pending changes. **Reload cloud copy** explicitly replaces pending local changes after confirmation and preserves a local recovery copy. Export a backup first if needed.
+- Original local-only data remains under its existing guest key. Use **Import previous device holdings** while signed in to add it to the chosen account after confirmation; it is never silently assigned to whichever user signs in.
 - Conflicting saves from another device are rejected using cloud revision checks; no silent merge is performed.
-- Sessions are saved in this browser and restored when you reopen the app. Expiring tokens refresh automatically when the app resumes or makes a cloud request. Signing out removes the saved session and signs out other open tabs of the same version, while keeping local holdings. Live and preview sessions are separate. Browser storage restrictions, cleared site data, or revoked sessions may require signing in again. Sign out on shared devices.
+- Sessions are saved in this browser and restored when you reopen the app. Expiring tokens refresh automatically when the app resumes or makes a cloud request. Signing out removes the saved session and signs out other open tabs of the same version. Account holdings remain in Supabase and their separate local cache; the signed-out interface displays guest holdings only. Live and preview sessions are separate. Browser storage restrictions, cleared site data, or revoked sessions may require signing in again. Sign out on shared devices.
 
-Live and preview use separate browser storage keys and separate cloud portfolios. They share the same account credentials, but preview holdings do not transfer into live automatically.
+Publishing frontend updates does not reset the Supabase database or account cache keys. Live and preview use separate browser storage keys and separate cloud portfolios. They share the same account credentials, but preview holdings do not transfer into live automatically.
 
 For a separate installation, follow [Supabase setup](supabase/README.md) and configure your own public project URL and publishable key in `dist/cloud.js`. Never put an administrative, service-role, or secret key in browser source.
 
@@ -101,6 +103,8 @@ node test.cjs
 node data-test.cjs
 node cloud-test.cjs
 node auth-session-test.cjs
+node account-store-test.cjs
+node account-ui-test.cjs
 node quotes-test.cjs
 node quotes-edge-test.cjs
 ```
