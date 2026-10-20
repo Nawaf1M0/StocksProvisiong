@@ -6,7 +6,7 @@ A lightweight portfolio tracker and averaging-down calculator. Enter your holdin
 
 ## Features
 
-- Multiple holdings with shares owned, average cost, proposed buy price, and target average.
+- Multiple holdings, each with its own currency, shares owned, average cost, proposed buy price, and target average.
 - Required purchase size and cash, including a flat purchase fee and optional fractional shares.
 - Fixed-budget estimates and up to three side-by-side purchase scenarios.
 - Before/after averages, break-even recovery percentages, position value, portfolio concentration, and unrealized gain or loss.
@@ -19,7 +19,7 @@ A lightweight portfolio tracker and averaging-down calculator. Enter your holdin
 
 Use the hosted app, or open `dist/index.html` locally for the calculator. The static app needs no dependency installation or build step. Hosted HTTPS is required for the supported email-link authentication flow; cloud sync and market data also require configured services and an internet connection.
 
-1. Choose the currency used by your holdings.
+1. Add or select a stock and choose its currency in the holding form.
 2. Select **Add stock**, then enter its symbol, shares owned, average purchase price, new buy price, target average, and optional fee.
 3. Review the shares and cash needed, the budget alternative, and position exposure.
 4. Select **Save holding** to keep the planning values in this browser.
@@ -41,7 +41,9 @@ A lower target is reachable only when the new buy price is below that target. Wh
 
 For example, 100 shares averaging 150 require another 100 shares at 100 to reach an average of 125, before fees. The existing monetary loss at a price of 100 remains 5,000, while the invested amount increases.
 
-Use **one currency per portfolio**. Changing the currency label does not convert amounts. Concentration uses the entered prices of tracked holdings, excludes cash and assets outside the app, and treats duplicate entries as separate holdings.
+**Currency belongs to each stock.** Hold USD, SAR, EUR, GBP, and AED stocks in the same account. Invested cost, entered-price value, and unrealized gain/loss are grouped by currency; amounts in different currencies are never added together without conversion. Concentration compares only holdings in the selected stock’s currency and excludes cash and untracked assets. Changing an existing holding’s currency requires confirmation and does not convert any amounts. Temporary scenarios reset when the stock currency changes.
+
+Existing holdings without their own currency inherit their original saved portfolio currency when loaded, preserving amounts and account ownership. The old envelope currency field remains only as a backward-compatible migration default; it no longer determines the currency of stocks that have their own setting.
 
 ## Accounts and cloud sync
 
@@ -49,7 +51,7 @@ An account is optional. Without signing in, holdings remain in browser local sto
 
 - Use email/password sign-in, or request an email sign-in link.
 - If you have no password, sign in by email link first and open **Set or change password**. **Forgot password?** starts email recovery.
-- Signing in automatically loads your portfolio from Supabase. Saved holdings, imports, deletions, and currency changes automatically sync to your account; unsaved form edits are excluded.
+- Signing in automatically loads your portfolio from Supabase. Saved holdings, imports, deletions, and saved stock-currency changes automatically sync to your account; unsaved form edits are excluded.
 - Each user has a separate browser cache. Offline or failed saves remain pending and retry when the connection returns. The account status message distinguishes local changes from a confirmed cloud save.
 - **Retry account sync** retries pending changes. **Reload cloud copy** explicitly replaces pending local changes after confirmation and preserves a local recovery copy. Export a backup first if needed.
 - Original local-only data remains under its existing guest key. Use **Import previous device holdings** while signed in to add it to the chosen account after confirmation; it is never silently assigned to whichever user signs in.
@@ -64,7 +66,7 @@ For a separate installation, follow [Supabase setup](supabase/README.md) and con
 
 In the planner, expand **Use a delayed or closing market price**, choose the market, and select **Fetch reference price**. Sign-in is required.
 
-| Market | Provider | Feed | Portfolio currency |
+| Market | Provider | Feed | Stock currency |
 | --- | --- | --- | --- |
 | Saudi stocks, such as `2222` | SAHMK | Delayed quotes | SAR |
 | US stocks, such as `AAPL` | Alpha Vantage | End-of-day quotes | USD |
@@ -79,7 +81,7 @@ Deployment requires the `market-quote` Supabase Edge Function and private `SAHMK
 
 Use **Export JSON** or **Export CSV** to preserve or transfer holdings. A backup reminder records when a file was generated; check that your browser actually saved it.
 
-Imports validate the entire file before asking to add its holdings. Existing entries are kept, duplicate symbols generate a warning, and imports in a different currency are rejected when the portfolio already contains holdings. Import limits are 1 MB per file and 1,000 total holdings.
+Imports validate the entire file before asking to add its holdings. Existing entries are kept, duplicate symbols generate a warning, and mixed-currency files are supported. Each CSV row retains its currency; older JSON backups inherit their original currency only for holdings that lack a stock-level setting. Import limits are 1 MB per file and 1,000 total holdings.
 
 CSV uses these columns:
 
@@ -105,6 +107,7 @@ node cloud-test.cjs
 node auth-session-test.cjs
 node account-store-test.cjs
 node account-ui-test.cjs
+node multicurrency-test.cjs
 node quotes-test.cjs
 node quotes-edge-test.cjs
 ```

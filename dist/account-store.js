@@ -1,20 +1,22 @@
 // Stable account keys and database revisions are independent of app releases.
 function createAccountStore(options){
   const {storage,baseKey,validate,readRemote,saveRemote,onChange,onStatus}=options;
+  const normalize=options.normalize||(value=>value);
   let user=null,epoch=0,record=null,ready=false,running=null,serial=0;
   const copy=value=>JSON.parse(JSON.stringify(value));
   const signature=value=>JSON.stringify(value,(_key,item)=>item&&typeof item==='object'&&!Array.isArray(item)?Object.fromEntries(Object.keys(item).sort().map(key=>[key,item[key]])):item);
   const empty=()=>({stocks:[],currency:'USD'});
   const keyFor=id=>id?baseKey+':user:'+id:baseKey;
-  function load(key){try{const value=JSON.parse(storage.getItem(key));return value&&validate(value)?value:null;}catch{return null;}}
+  function load(key){try{const raw=JSON.parse(storage.getItem(key));const value=raw?normalize(raw):null;return value&&validate(value)?value:null;}catch{return null;}}
   function data(){return {stocks:record.stocks,currency:record.currency};}
   function write(){try{storage.setItem(keyFor(user),JSON.stringify(record));return true;}catch{onStatus('Browser storage failed. Export a backup; account changes still need a confirmed cloud save.');return false;}}
   function status(message){onStatus(message);}
   function show(){onChange(copy(data()),keyFor(user),user);}
   function remoteRow(row){
     if(!row)return null;
-    if(!validate(row.data)||!Number.isSafeInteger(row.revision)||row.revision<1)throw Error('The cloud portfolio is invalid. Your local copy was kept.');
-    return row;
+    const normalized=normalize(row.data);
+    if(!validate(normalized)||!Number.isSafeInteger(row.revision)||row.revision<1)throw Error('The cloud portfolio is invalid. Your local copy was kept.');
+    return {...row,data:normalized};
   }
   async function flush(){
     if(!user||!ready||!record._sync.dirty)return;
@@ -88,6 +90,7 @@ function createAccountStore(options){
     async reload(){await connect(true);},
     guest:()=>{const value=load(baseKey);return value?copy({stocks:value.stocks,currency:value.currency}):null;},
     saveLocal(value){
+      value=normalize(value);
       if(!validate(value))throw Error('Invalid portfolio. Your saved copy was kept.');
       serial++;
       record={...copy(value),...(user?{_sync:{revision:record?._sync?.revision??null,dirty:true}}:{})};

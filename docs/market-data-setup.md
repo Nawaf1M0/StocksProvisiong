@@ -22,7 +22,7 @@ Quotes are cached for up to 15 minutes per function instance. Refreshes are thro
 
 ## Review
 
-Sign in on the preview. Open a holding, expand **Use a delayed or closing market price**, choose its market, and fetch. Review the source, feed type, and quote date/time. **Use for buy price** copies the price into the form without saving the holding automatically. Currency must match the current portfolio: SAR for Saudi and USD for US. Mixed-currency valuation is not implemented.
+Sign in on the preview. Open a holding, expand **Use a delayed or closing market price**, choose its market, and fetch. Review the source, feed type, and quote date/time. **Use for buy price** copies the price into the form without saving the holding automatically. Quote currency must match the selected stock: SAR for Saudi and USD for US. A portfolio can contain stocks in multiple currencies. Totals remain grouped by currency; FX-converted combined valuation is not implemented.
 
 Check one Saudi and one US symbol, quota or unavailable-provider errors, currency mismatch, and changing holdings during a request. The current preview is not a verified connected market-data service until both secrets and the function are deployed and these real requests pass.
 

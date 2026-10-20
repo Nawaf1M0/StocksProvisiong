@@ -4,7 +4,7 @@ const fs=require('node:fs');
 const vm=require('node:vm');
 const {test}=require('node:test');
 const {JSDOM}=require('jsdom');
-const base={symbol:'EXAMPLE',shares:100,average:150,price:100,target:125,fee:0,budget:5000,fractional:false};
+const base={symbol:'EXAMPLE',currency:'USD',shares:100,average:150,price:100,target:125,fee:0,budget:5000,fractional:false};
 function setup(t){
   const dom=new JSDOM(fs.readFileSync('dist/index.html','utf8'),{url:'https://position.test/',runScripts:'outside-only'});
   t.after(()=>dom.window.close());
@@ -49,7 +49,7 @@ test('fees, budget boundaries, fractional shares, target status and live holding
   for(const budget of [0,5,10]){h.edit(1,'budget',budget);assert.equal(h.metrics(1)['Shares to buy'],'0');assert.equal(h.metrics(1)['Cash used'],'$0.00');assert.equal(h.metrics(1)['Resulting average'],'$150.00');}
   h.edit(1,'target',130);h.input('#shares',200);assert.equal(h.metrics(1)['Shares needed for target'],'133.666667');
   h.input('#average',160);assert.equal(h.metrics(1)['Shares needed for target'],'200.333333');
-  h.$('#currency').value='SAR';h.$('#currency').dispatchEvent(new h.w.Event('change',{bubbles:true}));assert.match(h.metrics(1)['Cash used'],/SAR/);
+  h.$('#currency').value='SAR';h.$('#currency').dispatchEvent(new h.w.Event('change',{bubbles:true}));assert.equal(h.$('[data-scenario]'),null);h.click('#add-scenario');assert.match(h.metrics(2)['Cash used'],/SAR/);
 });
 test('invalid input is visible and cannot overwrite planner; recovery and unreachable targets',t=>{
   const h=setup(t);h.click('#add-scenario');

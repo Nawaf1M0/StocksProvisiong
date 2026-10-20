@@ -4,7 +4,7 @@
 
 Support Saudi Exchange and US stocks. Keep manual prices usable. A fetched quote shows its source, currency, quote timestamp, and whether it is end-of-day, delayed, or real-time. It never changes saved holdings automatically: the user explicitly copies it to the proposed buy price, reviews the calculation, and saves the holding.
 
-The existing app uses one portfolio currency and does not perform FX conversion. Saudi SAR and US USD quotes must not be applied to a portfolio with a different currency. Mixed-currency portfolio valuation is a separate feature.
+Each stock has its own currency. Saudi SAR and US USD quotes must match the selected stock. Totals are grouped by currency; combined FX-converted valuation is a separate feature.
 
 ## Connection design
 

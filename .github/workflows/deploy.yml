@@ -44,6 +44,7 @@ jobs:
           node auth-session-test.cjs
           node account-store-test.cjs
           node account-ui-test.cjs
+          node multicurrency-test.cjs
           node quotes-test.cjs
           node quotes-edge-test.cjs
           for file in dist/*.js; do node --check "$file"; done
