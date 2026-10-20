@@ -1,9 +1,9 @@
 // Provider-neutral checks applied before an external quote can enter a plan.
-function quoteRequest(symbol,market,portfolioCurrency){
+function quoteRequest(symbol,market,stockCurrency){
   const normalized=String(symbol).trim().toUpperCase();
   if(!['SA','US'].includes(market))throw Error('Choose Saudi or US stocks.');
   const currency=market==='SA'?'SAR':'USD';
-  if(portfolioCurrency!==currency)throw Error('This quote is in '+currency+'. Use a portfolio in that currency; changing a label does not convert your holdings.');
+  if(stockCurrency!==currency)throw Error('This quote is in '+currency+'. Choose that currency for this stock; changing a label does not convert its amounts.');
   if(market==='SA'&&!/^\d{4}$/.test(normalized))throw Error('Use a four-digit Saudi stock symbol, such as 2222.');
   if(market==='US'&&!/^[A-Z][A-Z0-9.-]{0,14}$/.test(normalized))throw Error('Enter a valid US stock symbol, such as AAPL.');
   return {symbol:normalized,market,currency};

@@ -3,7 +3,7 @@ const cloudEnvironment=document.querySelector('meta[name="position-preview"]')?'
 const cloudSessionKey='position-auth-'+cloudEnvironment+'-v1';
 const cloud=createCloudClient({...cloudConfig,storageKey:cloudSessionKey});
 let cloudUser=null,cloudRevision=null,cloudBusy=false,syncedSnapshot=null;
-const portfolioSnapshot=()=>JSON.stringify({stocks,currency});
+const portfolioSnapshot=()=>JSON.stringify(portfolioData());
 function cloudMessage(message){$('cloud-status').textContent=message;}
 function cloudControls(){
   $('cloud-auth').hidden=!!cloudUser;$('cloud-actions').hidden=!cloudUser;
@@ -42,15 +42,15 @@ $('cloud-send').onclick=()=>cloudTask(async()=>{
 });
 let accountStorage;try{accountStorage=localStorage;}catch{}
 const accountStore=createAccountStore({
-  storage:accountStorage,baseKey:guestPortfolioKey,
+  storage:accountStorage,baseKey:guestPortfolioKey,normalize:normalizePortfolio,
   validate:value=>value&&Array.isArray(value.stocks)&&value.stocks.length<=1000&&value.stocks.every(s=>valid(s)&&(s.fractional===undefined||typeof s.fractional==='boolean'))&&['USD','SAR','EUR','GBP','AED'].includes(value.currency),
   readRemote:id=>cloud.read(cloudEnvironment,id),
   saveRemote:(id,data,revision)=>cloud.save(cloudEnvironment,data,revision,id),
   onStatus:cloudMessage,
   onChange:(value,storageKey,owner)=>{
     const changed=key!==storageKey||portfolioSnapshot()!==JSON.stringify(value);
-    key=storageKey;stocks=value.stocks;currency=value.currency;$('currency').value=currency;
-    if(changed)edit(stocks.length?0:null);backupStatus();
+    key=storageKey;stocks=value.stocks;defaultCurrency=value.currency;
+    if(changed){currency=defaultCurrency;edit(stocks.length?0:null);}backupStatus();
     $('storage').textContent=owner?'Holdings are linked to your account. Check the account sync message above.':'Guest holdings are saved only on this device.';
     const guest=accountStore.guest();$('cloud-import-guest').hidden=!owner||!guest?.stocks.length;
   }
@@ -70,10 +70,9 @@ $('cloud-load').onclick=()=>cloudTask(async()=>{
 $('cloud-upload').onclick=()=>cloudTask(async()=>{await accountStore.retry();});
 $('cloud-import-guest').onclick=()=>cloudTask(async()=>{
   const guest=accountStore.guest();if(!cloudUser||!guest?.stocks.length)return;
-  if(stocks.length&&currency!==guest.currency)throw Error('Guest holdings use a different currency. Export them and convert amounts before importing.');
   if(stocks.length+guest.stocks.length>1000)throw Error('This import would exceed the 1000-holding limit.');
   if(!confirm('Add '+guest.stocks.length+' previous device holdings to '+cloudUser.email+'? Only import data that belongs to you. The original local copy will be kept.'))return;
-  stocks.push(...guest.stocks);currency=guest.currency;$('currency').value=currency;persist();edit(stocks.length?0:null);
+  if(!stocks.length)defaultCurrency=guest.currency;stocks.push(...guest.stocks);persist();edit(stocks.length?0:null);
 });
 $('cloud-signout').onclick=()=>cloudTask(async()=>{
   const pending=accountStore.hasPending();

@@ -1,5 +1,5 @@
 let displayedQuote=null;
-const currentQuoteRequest=()=>quoteRequest($('symbol').value,$('quote-market').value,currency);
+const currentQuoteRequest=()=>quoteRequest($('symbol').value,$('quote-market').value,read().currency);
 function clearQuote(){displayedQuote=null;$('quote-use').hidden=true;$('quote-result').textContent='Fetch a reference price, then choose whether to use it. Your entered buy price stays unchanged.';}
 $('quote-fetch').onclick=async()=>{
   if($('quote-fetch').disabled)return;
@@ -12,7 +12,7 @@ $('quote-fetch').onclick=async()=>{
     if(JSON.stringify(current)!==JSON.stringify(request))throw Error('The selected stock or currency changed. Please fetch its price again.');
     displayedQuote={...validateQuote(response,request),precision:response.precision};
     const date=response.precision==='date'?displayedQuote.asOf.slice(0,10):new Date(displayedQuote.asOf).toLocaleString();
-    $('quote-result').textContent=money(displayedQuote.price)+' · '+displayedQuote.source+' · '+displayedQuote.feed+' · '+(response.precision==='date'?'Trading date: ':'Quote time: ')+date+'. This is a reference price, not a guaranteed execution price.';
+    $('quote-result').textContent=money(displayedQuote.price,displayedQuote.currency)+' · '+displayedQuote.source+' · '+displayedQuote.feed+' · '+(response.precision==='date'?'Trading date: ':'Quote time: ')+date+'. This is a reference price, not a guaranteed execution price.';
     $('quote-use').hidden=false;
   }catch(error){$('quote-result').textContent=error.message;}
   finally{$('quote-fetch').disabled=false;}
