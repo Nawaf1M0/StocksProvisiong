@@ -52,7 +52,7 @@ An account is optional. Without signing in, holdings remain in browser local sto
 - **Save to cloud** uploads saved holdings; unsaved form edits are excluded.
 - **Load from cloud** replaces this browser's portfolio after confirmation. Export a backup first if needed.
 - Conflicting saves from another device are rejected using cloud revision checks; no silent merge is performed.
-- Sessions are held in memory. Reloading or closing the page requires signing in again. Signing out keeps the local holdings on that device.
+- Sessions are saved in this browser and restored when you reopen the app. Expiring tokens refresh automatically when the app resumes or makes a cloud request. Signing out removes the saved session and signs out other open tabs of the same version, while keeping local holdings. Live and preview sessions are separate. Browser storage restrictions, cleared site data, or revoked sessions may require signing in again. Sign out on shared devices.
 
 Live and preview use separate browser storage keys and separate cloud portfolios. They share the same account credentials, but preview holdings do not transfer into live automatically.
 
@@ -100,6 +100,7 @@ node scenarios-test.cjs
 node test.cjs
 node data-test.cjs
 node cloud-test.cjs
+node auth-session-test.cjs
 node quotes-test.cjs
 node quotes-edge-test.cjs
 ```
